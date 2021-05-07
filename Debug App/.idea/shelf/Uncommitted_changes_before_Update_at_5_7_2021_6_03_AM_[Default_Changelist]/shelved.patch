@@ -1,0 +1,120 @@
+Index: app/src/main/java/com/example/cs472androidtest/MainActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.cs472androidtest;\r\n\r\nimport androidx.annotation.RequiresApi;\r\nimport androidx.appcompat.app.AppCompatActivity;\r\nimport java.io.IOException;\r\nimport android.accessibilityservice.AccessibilityService;\r\nimport android.graphics.Region;\r\nimport android.os.Build;\r\nimport android.os.Bundle;\r\nimport android.os.Vibrator;\r\nimport android.util.Log;\r\nimport android.view.MotionEvent;\r\nimport android.view.View;\r\nimport android.view.accessibility.AccessibilityEvent;\r\nimport android.view.accessibility.AccessibilityWindowInfo;\r\nimport android.widget.Button;\r\nimport android.widget.ImageView;\r\nimport android.widget.Magnifier;\r\nimport android.widget.TextView;\r\nimport android.accessibilityservice.AccessibilityService.*;\r\nimport android.view.accessibility.AccessibilityManager;\r\nimport android.content.Context;\r\nimport java.lang.reflect.Method;\r\n//import android.support.annotation.NonNull;\r\n//import android.support.annotation.Nullable;\r\nimport java.util.List;\r\n\r\npublic class MainActivity extends AppCompatActivity {\r\n    Button button;\r\n    Button button2;\r\n    TextView textView;\r\n    ImageView image;\r\n    AccessibilityManager am;\r\n    Magnifier magnifier;\r\n    Vibrator vibrator;\r\n    float number = 1.75f;\r\n\r\n    //THis function is to check if Accessibility Services is enabled on an Android device.\r\n    //Will change variable names to something less ambiguous later.\r\n    public void accessibilityServiceChecker() {\r\n        am = (AccessibilityManager) this.getSystemService(Context.ACCESSIBILITY_SERVICE);\r\n\r\n        if (am.isEnabled()) {\r\n            AccessibilityEvent event = AccessibilityEvent.obtain();\r\n            event.setEventType(AccessibilityEvent.TYPE_ANNOUNCEMENT);\r\n            event.setClassName(getClass().getName());\r\n            event.setPackageName(this.getPackageName());\r\n            event.getText().add(\"Welcome to our application.\");\r\n            am.sendAccessibilityEvent(event);\r\n        }\r\n\r\n        Class clazz = am.getClass();\r\n        Method m = null;\r\n        try {\r\n            m = clazz.getMethod(\"isHighTextContrastEnabled\", null);\r\n        } catch (NoSuchMethodException e) {\r\n            Log.w(\"FAIL\", \"isHighTextContrastEnabled not found in AccessibilityManager\");\r\n        }\r\n\r\n        Object result = null;\r\n        try {\r\n            result = m.invoke(am, null);\r\n            if (result != null && result instanceof Boolean) {\r\n                Boolean b = (Boolean) result;\r\n                Log.d(\"result\", \"b =\" + b);\r\n            }\r\n        } catch (Exception e) {\r\n            android.util.Log.d(\"fail\", \"isHighTextContrastEnabled invoked with an exception\" + e.getMessage());\r\n            //return;\r\n        }\r\n    }\r\n    //Creates the views and getter for the buttons and text boxes.\r\n    @RequiresApi(api = Build.VERSION_CODES.N)\r\n    @Override\r\n    protected void onCreate(Bundle savedInstanceState) {\r\n        super.onCreate(savedInstanceState);\r\n        setContentView(R.layout.activity_main);\r\n\r\n        textView = findViewById(R.id.textView);\r\n        button = findViewById(R.id.button);\r\n        button2 = findViewById(R.id.button2);\r\n        image = findViewById(R.id.imageView);\r\n        image.setImageResource(R.drawable.ic_launcher_background);\r\n        vibrator = (Vibrator)getSystemService(VIBRATOR_SERVICE);\r\n\r\n        class magThread extends Thread {\r\n            public void run() {\r\n                //setting the OnClick listener\r\n                button.setOnClickListener(new View.OnClickListener() {\r\n                    boolean button_on = false;\r\n\r\n                    //Version Code is for different levels of Android API\r\n                    //N = API level 24\r\n                    @RequiresApi(api = Build.VERSION_CODES.N)\r\n                    @Override\r\n                    public void onClick(View v) {\r\n                        if (button_on == false) {\r\n                            System.out.println(\"yes\");\r\n                            textView.setText(\"Magnification Clicked!\");\r\n                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {\r\n                                magnification(textView);\r\n                            }\r\n                            button_on = true;\r\n                        }\r\n                        else if (button_on == true) {\r\n                            textView.setText(\"Magnification Stopped!\");\r\n                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {\r\n                                magnification(textView);\r\n                            }\r\n                            button_on = false;\r\n                        }\r\n                    }\r\n                });\r\n            }\r\n        }\r\n\r\n        /* not sure if this works, I don't have a real Android device to test on. It should allow the user\r\n          to dynamically magnify based on where they are holding their finger down on the screen\r\n          Taken from Android here: https://developer.android.com/guide/topics/text/magnifier#java*/\r\n        image.setOnTouchListener(new View.OnTouchListener() {\r\n            @RequiresApi(api = Build.VERSION_CODES.P)\r\n            @Override\r\n            public boolean onTouch(View v, MotionEvent event) {\r\n                if (magnifier == null){\r\n                    return false;\r\n                }\r\n\r\n                switch (event.getActionMasked()) {\r\n                    case MotionEvent.ACTION_DOWN:\r\n                        // Fall through.\r\n                    case MotionEvent.ACTION_MOVE: {\r\n                        final int[] viewPosition = new int[2];\r\n                        v.getLocationOnScreen(viewPosition);\r\n                        magnifier.show(event.getRawX() - viewPosition[0],\r\n                                event.getRawY() - viewPosition[1]);\r\n                        break;\r\n                    }\r\n\r\n                    case MotionEvent.ACTION_CANCEL:\r\n                        // Fall through.\r\n                    case MotionEvent.ACTION_UP: {\r\n                        magnifier.dismiss();\r\n                    }\r\n                }\r\n                return true;\r\n            }\r\n        });\r\n\r\n        //Button2 click\r\n        class vibThread extends Thread {\r\n            public void run() {\r\n                button2.setOnClickListener(new View.OnClickListener() {\r\n                    boolean button_on = false;\r\n\r\n                    @Override\r\n                    public void onClick(View v) {\r\n                        if (button_on == false) {\r\n                            textView.setText(\"Vibration Clicked!\");\r\n                            vibration(image, button_on);\r\n                            accessibilityServiceChecker();\r\n                            button_on = true;\r\n                            return;\r\n                        }\r\n                        if (button_on == true) {\r\n                            textView.setText(\"Vibration Cancelled!\");\r\n                            vibration(image, button_on);\r\n                            accessibilityServiceChecker();\r\n                            button_on = false;\r\n                            return;\r\n                        }\r\n                    }\r\n                });\r\n            }\r\n        }\r\n\r\n        magThread magnificationThread = new magThread();\r\n        vibThread vibrationThread = new vibThread();\r\n        magnificationThread.start();\r\n        vibrationThread.start();\r\n    }\r\n\r\n    //Function that executes when you click magnify\r\n    @RequiresApi(api = Build.VERSION_CODES.P)\r\n    public void magnification(View view) {\r\n        if(magnifier != null){\r\n            magnifier.dismiss();\r\n            magnifier = null;\r\n            button.setText(\"Magnification\");\r\n            return;\r\n        }\r\n\r\n        view.setAccessibilityDelegate(new View.AccessibilityDelegate());\r\n        magnifier = new Magnifier(view);\r\n\r\n        //Build Version accounts for different API levels for different version of Android\r\n        //Q = API level 29.\r\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\r\n            magnifier.setZoom(number);\r\n            magnifier.show(view.getWidth()/2, view.getHeight()/2);\r\n        }\r\n\r\n        button.setText(\"Dismiss Magnification\");\r\n        \r\n    }\r\n\r\n    //Function that executes when you click vibrate\r\n    public void vibration(View view, boolean button_on) {\r\n        view.setAccessibilityDelegate(new View.AccessibilityDelegate());\r\n        if (button_on == false)\r\n            vibrator.vibrate(5000);\r\n\r\n        //Cancels vibration when the button is clicked again.\r\n        if (button_on == true) {\r\n                vibrator.cancel();\r\n        }\r\n        textView.announceForAccessibility(textView.getText());\r\n    }\r\n\r\n    @Override\r\n    public boolean onTouchEvent(MotionEvent event)\r\n    {\r\n        if(magnifier == null)\r\n            return false;\r\n        magnifier.show(event.getX()-300,event.getY()-1000);\r\n        return false;\r\n    }\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/example/cs472androidtest/MainActivity.java	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ app/src/main/java/com/example/cs472androidtest/MainActivity.java	(date 1616548758543)
+@@ -216,6 +216,7 @@
+         textView.announceForAccessibility(textView.getText());
+     }
+ 
++    @RequiresApi(api = Build.VERSION_CODES.P)
+     @Override
+     public boolean onTouchEvent(MotionEvent event)
+     {
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\r\n    package=\"com.example.cs472androidtest\">\r\n\r\n    <uses-permission android:name=\"android.permission.VIBRATE\" />\r\n    <application\r\n        android:allowBackup=\"true\"\r\n        android:icon=\"@mipmap/ic_launcher\"\r\n        android:label=\"@string/app_name\"\r\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\r\n        android:supportsRtl=\"true\"\r\n        android:theme=\"@style/AppTheme\">\r\n\r\n        <activity android:name=\".MainActivity\">\r\n\r\n            <intent-filter>\r\n                <action android:name=\"android.intent.action.MAIN\" />\r\n\r\n                <category android:name=\"android.intent.category.LAUNCHER\" />\r\n            </intent-filter>\r\n\r\n\r\n        </activity>\r\n        <service android:name=\".MainActivity\"\r\n                 android:permission=\"android.permission.BIND_ACCESSIBILITY_SERVICE\">\r\n            <intent-filter>\r\n                <action android:name=\"android.accessibilityservice.AccessibilityService\" />\r\n            </intent-filter>\r\n        </service>\r\n    </application>\r\n\r\n</manifest>\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/AndroidManifest.xml	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ app/src/main/AndroidManifest.xml	(date 1616548758559)
+@@ -3,6 +3,8 @@
+     package="com.example.cs472androidtest">
+ 
+     <uses-permission android:name="android.permission.VIBRATE" />
++    <uses-permission android:name="android.permission.VIBRATE" />
++
+     <application
+         android:allowBackup="true"
+         android:icon="@mipmap/ic_launcher"
+Index: gradle/wrapper/gradle-wrapper.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>#Tue Feb 16 15:12:23 PST 2021\r\ndistributionBase=GRADLE_USER_HOME\r\ndistributionPath=wrapper/dists\r\nzipStoreBase=GRADLE_USER_HOME\r\nzipStorePath=wrapper/dists\r\ndistributionUrl=https\\://services.gradle.org/distributions/gradle-6.5-all.zip\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>windows-1252
+===================================================================
+--- gradle/wrapper/gradle-wrapper.properties	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ gradle/wrapper/gradle-wrapper.properties	(date 1620392357546)
+@@ -3,4 +3,4 @@
+ distributionPath=wrapper/dists
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-all.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-6.7.1-all.zip
+Index: .idea/runConfigurations.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"RunConfigurationProducerService\">\r\n    <option name=\"ignoredProducers\">\r\n      <set>\r\n        <option value=\"org.jetbrains.plugins.gradle.execution.test.runner.AllInPackageGradleConfigurationProducer\" />\r\n        <option value=\"org.jetbrains.plugins.gradle.execution.test.runner.TestClassGradleConfigurationProducer\" />\r\n        <option value=\"org.jetbrains.plugins.gradle.execution.test.runner.TestMethodGradleConfigurationProducer\" />\r\n      </set>\r\n    </option>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/runConfigurations.xml	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ .idea/runConfigurations.xml	(date 1620392336077)
+@@ -3,6 +3,7 @@
+   <component name="RunConfigurationProducerService">
+     <option name="ignoredProducers">
+       <set>
++        <option value="com.android.tools.idea.compose.preview.runconfiguration.ComposePreviewRunConfigurationProducer" />
+         <option value="org.jetbrains.plugins.gradle.execution.test.runner.AllInPackageGradleConfigurationProducer" />
+         <option value="org.jetbrains.plugins.gradle.execution.test.runner.TestClassGradleConfigurationProducer" />
+         <option value="org.jetbrains.plugins.gradle.execution.test.runner.TestMethodGradleConfigurationProducer" />
+Index: build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// Top-level build file where you can add configuration options common to all sub-projects/modules.\r\nbuildscript {\r\n    repositories {\r\n        google()\r\n        jcenter()\r\n    }\r\n    dependencies {\r\n        classpath 'com.android.tools.build:gradle:4.1.2'\r\n\r\n        // NOTE: Do not place your application dependencies here; they belong\r\n        // in the individual module build.gradle files\r\n    }\r\n}\r\n\r\nallprojects {\r\n    repositories {\r\n        google()\r\n        jcenter()\r\n    }\r\n}\r\n\r\ntask clean(type: Delete) {\r\n    delete rootProject.buildDir\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- build.gradle	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ build.gradle	(date 1620392358186)
+@@ -5,7 +5,7 @@
+         jcenter()
+     }
+     dependencies {
+-        classpath 'com.android.tools.build:gradle:4.1.2'
++        classpath 'com.android.tools.build:gradle:4.2.0'
+ 
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+Index: .idea/compiler.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"CompilerConfiguration\">\r\n    <bytecodeTargetLevel target=\"1.8\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/compiler.xml	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ .idea/compiler.xml	(date 1620392336054)
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+   <component name="CompilerConfiguration">
+-    <bytecodeTargetLevel target="1.8" />
++    <bytecodeTargetLevel target="11" />
+   </component>
+ </project>
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ProjectRootManager\" version=\"2\" languageLevel=\"JDK_1_8\" default=\"true\" project-jdk-name=\"1.8\" project-jdk-type=\"JavaSDK\">\r\n    <output url=\"file://$PROJECT_DIR$/build/classes\" />\r\n  </component>\r\n  <component name=\"ProjectType\">\r\n    <option name=\"id\" value=\"Android\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/misc.xml	(revision 2993d8401dc22ec0dba33efbc8132a45a8811ec7)
++++ .idea/misc.xml	(date 1620392335989)
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+     <output url="file://$PROJECT_DIR$/build/classes" />
+   </component>
+   <component name="ProjectType">
